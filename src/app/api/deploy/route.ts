@@ -80,12 +80,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // Step 1: Build + restart
-    const { stdout, stderr } = await execAsync(
-      `cd '${PROJECT_DIR}' && npm run build 2>&1 && pm2 restart lawyer-mb 2>&1`,
-      { timeout: 5 * 60 * 1000, maxBuffer: 1024 * 1024 * 10 }
-    );
-    const buildOutput = (stdout + stderr).trim().slice(-300);
+    // Step 1: Build + restart (use absolute paths — Next.js env may have limited PATH)
+    const npmBin = "/usr/bin/npm";
+    const pm2Bin = "/usr/bin/pm2";
+    let buildOutput = "";
+
+    try {
+      const buildResult = await execAsync(
+        `cd '${PROJECT_DIR}' && ${npmBin} run build 2>&1`,
+        { timeout: 4 * 60 * 1000, maxBuffer: 1024 * 1024 * 10 }
+      );
+      buildOutput = (buildResult.stdout + buildResult.stderr).trim().slice(-300);
+    } catch (buildErr: any) {
+      buildOutput = buildErr.stdout || buildErr.stderr || buildErr.message || "build failed";
+      // Non-fatal: if build fails, still try to restart with existing build
+    }
+
+    try {
+      await execAsync(`${pm2Bin} restart lawyer-mb`, { timeout: 30000 });
+    } catch (pm2Err: any) {
+      // PM2 restart failed — not fatal, server may still be running
+    }
 
     // Step 2: Screenshot (wait 3s for server to come back up)
     await new Promise((r) => setTimeout(r, 3000));
