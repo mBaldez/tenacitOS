@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     // Escape single quotes in task for shell safety
     const escapedTask = task.replace(/'/g, "'\\''");
 
-    const command = `cd '${workDir}' && claude --print --dangerously-skip-permissions '${escapedTask}' < /dev/null 2>&1`;
+    const command = `su -s /bin/bash claude-runner -c "cd '${workDir}' && /home/claude-runner/run-claude.sh '${escapedTask}'" 2>&1`;
 
     const start = Date.now();
 
