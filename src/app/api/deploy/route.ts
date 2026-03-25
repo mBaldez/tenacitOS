@@ -80,26 +80,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // Step 1: Build + restart (use absolute paths — Next.js env may have limited PATH)
-    const npmBin = "/usr/bin/npm";
-    const pm2Bin = "/usr/bin/pm2";
+    // Step 1: Run deploy script (runs in correct shell environment)
     let buildOutput = "";
-
     try {
-      const buildResult = await execAsync(
-        `cd '${PROJECT_DIR}' && ${npmBin} run build 2>&1`,
+      const result = await execAsync(
+        `bash /root/deploy-lawyer-mb.sh 2>&1`,
         { timeout: 4 * 60 * 1000, maxBuffer: 1024 * 1024 * 10 }
       );
-      buildOutput = (buildResult.stdout + buildResult.stderr).trim().slice(-300);
-    } catch (buildErr: any) {
-      buildOutput = buildErr.stdout || buildErr.stderr || buildErr.message || "build failed";
-      // Non-fatal: if build fails, still try to restart with existing build
-    }
-
-    try {
-      await execAsync(`${pm2Bin} restart lawyer-mb`, { timeout: 30000 });
-    } catch (pm2Err: any) {
-      // PM2 restart failed — not fatal, server may still be running
+      buildOutput = result.stdout.trim().slice(-300);
+    } catch (err: any) {
+      buildOutput = err.stdout || err.stderr || err.message || "deploy script failed";
     }
 
     // Step 2: Screenshot (wait 3s for server to come back up)
