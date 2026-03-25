@@ -2,7 +2,8 @@
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Terminal, Lock, AlertCircle } from "lucide-react";
+import Image from "next/image";
+import { Lock, AlertCircle } from "lucide-react";
 
 function LoginForm() {
   const [password, setPassword] = useState("");
@@ -50,27 +51,23 @@ function LoginForm() {
       {/* Header */}
       <div className="text-center mb-6 flex flex-col items-center gap-2">
         <div className="flex items-center gap-2.5">
-          <Terminal 
-            className="w-7 h-7" 
-            style={{ color: 'var(--accent)' }} 
-          />
-          <span className="text-2xl">🦞</span>
-          <h1 
+          <Image src="/logo.png" alt="Lawyer MB" width={32} height={20} style={{ objectFit: 'contain' }} />
+          <h1
             className="text-xl font-bold"
-            style={{ 
+            style={{
               fontFamily: 'var(--font-heading)',
               color: 'var(--text-primary)',
               letterSpacing: '-0.5px'
             }}
           >
-            Mission Control
+            Lawyer MB — Amora HQ
           </h1>
         </div>
-        <p 
+        <p
           className="text-sm"
           style={{ color: 'var(--text-secondary)' }}
         >
-          Introduce la contraseña para acceder
+          Seu escritório. Sua inteligência.
         </p>
       </div>
 
@@ -127,7 +124,7 @@ function LoginForm() {
         className="text-center text-xs mt-6"
         style={{ color: 'var(--text-muted)' }}
       >
-        Tenacitas Agent Dashboard
+        Lawyer MB — Amora HQ
       </p>
     </div>
   );

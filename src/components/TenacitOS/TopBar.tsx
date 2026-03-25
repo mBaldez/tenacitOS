@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Search, Bell, User, Command } from "lucide-react";
+import Image from "next/image";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
 
@@ -47,7 +48,7 @@ export function TopBar() {
       >
         {/* Left: Logo & Title */}
         <div className="flex items-center gap-3">
-          <span style={{ fontSize: "20px" }}>🦞</span>
+          <Image src="/logo.png" alt="Lawyer MB" width={32} height={20} style={{ objectFit: "contain" }} />
           <h1
             style={{
               fontFamily: "var(--font-heading)",
@@ -57,7 +58,7 @@ export function TopBar() {
               letterSpacing: "-0.5px",
             }}
           >
-            TenacitOS
+            Lawyer MB — Amora HQ
           </h1>
           {/* Version Badge */}
           <div
@@ -113,6 +114,13 @@ export function TopBar() {
               Search... ⌘K
             </span>
           </button>
+
+          {/* Amora status */}
+          <div className="flex items-center gap-2 mr-4">
+            <img src="/amora-avatar.jpg" alt="Amora" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #C9A84C' }} />
+            <span style={{ fontSize: 13, color: '#C9A84C', fontWeight: 600 }}>Amora</span>
+            <span style={{ fontSize: 11, color: '#C9A84C' }}>● Ativa</span>
+          </div>
 
           {/* Notifications Dropdown */}
           <NotificationDropdown />

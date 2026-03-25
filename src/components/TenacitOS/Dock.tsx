@@ -4,32 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home,
-  Monitor,
-  FolderOpen,
-  Brain,
   Bot,
+  Smartphone,
+  BarChart2,
   Building2,
-  Activity,
-  Clock,
-  Puzzle,
-  DollarSign,
-  Settings,
-  History,
 } from "lucide-react";
 
 const dockItems = [
-  { href: "/", label: "Dashboard", icon: Home },
-  { href: "/system", label: "System Monitor", icon: Monitor },
-  { href: "/files", label: "Files", icon: FolderOpen },
-  { href: "/memory", label: "Memory", icon: Brain },
-  { href: "/agents", label: "Agents", icon: Bot },
-  { href: "/office", label: "Office", icon: Building2 },
-  { href: "/activity", label: "Activity", icon: Activity },
-  { href: "/cron", label: "Cron Jobs", icon: Clock },
-  { href: "/sessions", label: "Sessions", icon: History },
-  { href: "/skills", label: "Skills", icon: Puzzle },
-  { href: "/costs", label: "Costs & Analytics", icon: DollarSign },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/", label: "Mission Control", icon: Home },
+  { href: "/multi-agent", label: "Multi-Agent", icon: Bot },
+  { href: "/conteudo", label: "Conteúdo", icon: Smartphone },
+  { href: "/metricas", label: "Métricas", icon: BarChart2 },
+  { href: "/office", label: "3D Office", icon: Building2 },
 ];
 
 export function Dock() {
