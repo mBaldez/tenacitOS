@@ -1,47 +1,109 @@
 /**
  * Deploy API
  * POST /api/deploy
- * Body: { secret: string, page?: string }
+ * Body: { secret?: string, page?: string, caption?: string }
  *
- * Runs npm run build + pm2 restart lawyer-mb as root.
- * Returns screenshot URL after deploy completes.
- * Called by Amora after code changes via /api/claude-task.
+ * Full Amora CEO cycle:
+ *  1. npm run build + pm2 restart
+ *  2. Screenshot of dashboard
+ *  3. Send screenshot to Michael via Telegram
+ *
+ * Called by Amora after every code task via /api/claude-task.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { exec } from "child_process";
 import { promisify } from "util";
+import { readFileSync, existsSync, unlinkSync } from "fs";
 
 const execAsync = promisify(exec);
 
 const BRIDGE_SECRET = process.env.CLAUDE_BRIDGE_SECRET;
 const PROJECT_DIR = process.env.CLAUDE_DEFAULT_PROJECT || "/root/lawyer-mb";
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+const SCREENSHOT_TOKEN = process.env.SCREENSHOT_TOKEN || "amora-screenshot-2026";
+
+async function takeScreenshot(page = "/"): Promise<string | null> {
+  const safePage = page.replace(/[^a-zA-Z0-9\-_/]/g, "").slice(0, 50) || "/";
+  const url = `http://localhost:3010${safePage}?_stoken=${SCREENSHOT_TOKEN}`;
+  const outFile = `/tmp/amora-ss-${Date.now()}.png`;
+
+  try {
+    await execAsync(
+      `chromium-browser --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=1440,900 --screenshot="${outFile}" "${url}" 2>&1`,
+      { timeout: 20000 }
+    );
+    if (existsSync(outFile)) return outFile;
+  } catch {
+    // screenshot failed — non-fatal
+  }
+  return null;
+}
+
+async function sendTelegramPhoto(photoPath: string, caption: string): Promise<void> {
+  if (!BOT_TOKEN || !CHAT_ID) return;
+
+  const form = new FormData();
+  form.append("chat_id", CHAT_ID);
+  form.append("caption", caption);
+
+  const blob = new Blob([readFileSync(photoPath)], { type: "image/png" });
+  form.append("photo", blob, "dashboard.png");
+
+  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+    method: "POST",
+    body: form,
+  });
+}
+
+async function sendTelegramMessage(text: string): Promise<void> {
+  if (!BOT_TOKEN || !CHAT_ID) return;
+
+  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: CHAT_ID, text }),
+  });
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { secret } = body as { secret?: string };
+    const body = await request.json().catch(() => ({}));
+    const {
+      secret,
+      page = "/",
+      caption = "✅ Deploy concluído — dashboard atualizado!",
+    } = body as { secret?: string; page?: string; caption?: string };
 
     const headerSecret = request.headers.get("x-bridge-secret");
     if (BRIDGE_SECRET && secret !== BRIDGE_SECRET && headerSecret !== BRIDGE_SECRET) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const start = Date.now();
-
-    // Run build + restart (Next.js runs as root so this works)
+    // Step 1: Build + restart
     const { stdout, stderr } = await execAsync(
       `cd '${PROJECT_DIR}' && npm run build 2>&1 && pm2 restart lawyer-mb 2>&1`,
       { timeout: 5 * 60 * 1000, maxBuffer: 1024 * 1024 * 10 }
     );
+    const buildOutput = (stdout + stderr).trim().slice(-300);
 
-    const duration = Date.now() - start;
-    const output = (stdout + stderr).trim();
+    // Step 2: Screenshot (wait 3s for server to come back up)
+    await new Promise((r) => setTimeout(r, 3000));
+    const screenshotPath = await takeScreenshot(page);
 
-    return NextResponse.json({
-      success: true,
-      output: output.slice(-500), // last 500 chars of build output
-      duration,
-    });
+    // Step 3: Send to Telegram
+    if (screenshotPath) {
+      try {
+        await sendTelegramPhoto(screenshotPath, caption);
+        unlinkSync(screenshotPath);
+      } catch {
+        await sendTelegramMessage(`${caption}\n\nDashboard: http://100.78.232.120:3010`).catch(() => {});
+      }
+    } else {
+      await sendTelegramMessage(`${caption}\n\nDashboard: http://100.78.232.120:3010`).catch(() => {});
+    }
+
+    return NextResponse.json({ success: true, buildOutput });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
