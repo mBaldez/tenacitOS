@@ -80,20 +80,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // Step 1: Run deploy script (runs in correct shell environment)
+    // Step 1: Build only (does NOT restart — restart happens after response is sent)
     let buildOutput = "";
     try {
       const result = await execAsync(
-        `bash /root/deploy-lawyer-mb.sh 2>&1`,
+        `cd '${PROJECT_DIR}' && /usr/bin/npm run build 2>&1`,
         { timeout: 4 * 60 * 1000, maxBuffer: 1024 * 1024 * 10 }
       );
       buildOutput = result.stdout.trim().slice(-300);
     } catch (err: any) {
-      buildOutput = err.stdout || err.stderr || err.message || "deploy script failed";
+      buildOutput = (err as any).stdout || (err as any).stderr || (err as Error).message || "build failed";
     }
 
-    // Step 2: Screenshot (wait 3s for server to come back up)
-    await new Promise((r) => setTimeout(r, 3000));
+    // Step 2: Screenshot (current build, before restart)
     const screenshotPath = await takeScreenshot(page);
 
     // Step 3: Send to Telegram
@@ -107,6 +106,9 @@ export async function POST(request: NextRequest) {
     } else {
       await sendTelegramMessage(`${caption}\n\nDashboard: http://100.78.232.120:3010`).catch(() => {});
     }
+
+    // Step 4: Restart detached AFTER response — survives PM2 killing this process
+    exec("nohup bash -c 'sleep 2 && /usr/bin/pm2 restart lawyer-mb' > /tmp/restart.log 2>&1 &");
 
     return NextResponse.json({ success: true, buildOutput });
   } catch (error) {
