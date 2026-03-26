@@ -5,7 +5,7 @@ import type { NextRequest } from "next/server";
 const PUBLIC_ROUTES = new Set(["/login"]);
 
 // API routes that are always public (auth endpoints + health check + claude bridge)
-const PUBLIC_API_PREFIXES = ["/api/auth/", "/api/health", "/api/claude-task", "/api/deploy", "/api/screenshot"];
+const PUBLIC_API_PREFIXES = ["/api/auth/", "/api/health", "/api/claude-task", "/api/deploy", "/api/screenshot", "/api/bridge"];
 
 function isAuthenticated(request: NextRequest): boolean {
   // Screenshot token bypass (only from localhost via Chromium headless)
